@@ -74,8 +74,7 @@ def save_scan(name, manager, score, level, findings):
 
     conn.execute(
         """
-        INSERT INTO scans
-        (
+        INSERT INTO scans (
             package_name,
             manager,
             score,
@@ -119,77 +118,6 @@ def load_history(limit=100):
 
 
 # =========================================================
-# CUSTOM CSS
-# =========================================================
-
-def render_css():
-
-    st.markdown(
-        """
-        <style>
-
-        .block-container {
-            padding-top: 2rem;
-            padding-bottom: 3rem;
-            max-width: 1250px;
-        }
-
-        .hero {
-            padding: 1.5rem 1.7rem;
-            border: 1px solid rgba(100,116,139,.25);
-            border-radius: 18px;
-            background: linear-gradient(
-                135deg,
-                rgba(15,23,42,.98),
-                rgba(30,41,59,.92)
-            );
-            color: white;
-            margin-bottom: 1rem;
-        }
-
-        .hero h1 {
-            margin: 0;
-            font-size: 2.4rem;
-        }
-
-        .hero p {
-            margin: .45rem 0 0;
-            color: #cbd5e1;
-        }
-
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-render_css()
-
-
-# =========================================================
-# HERO HEADER
-# =========================================================
-
-st.markdown(
-    """
-    <div class="hero">
-        <h1>🛡️ PackagePatrol AI</h1>
-
-        <p>
-            Intelligent Supply Chain Security for Open-Source Packages
-        </p>
-
-        <p>
-            <b>The Antivirus for Your Package Manager.</b>
-            — scan before you install.
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# =========================================================
 # SESSION STATE
 # =========================================================
 
@@ -205,19 +133,18 @@ if "manager" not in st.session_state:
 if "package_input" not in st.session_state:
     st.session_state.package_input = ""
 
-# Important:
-# Demo buttons will store their value here first.
-# The package_input widget will receive the value
-# BEFORE it is created on the next rerun.
+# Temporary state for demo buttons.
+# This prevents StreamlitWidgetAlreadyInstantiatedError.
 if "demo_package" not in st.session_state:
     st.session_state.demo_package = None
 
 
 # =========================================================
-# DEMO PACKAGE STATE
+# DEMO PACKAGE HANDLING
 # =========================================================
 
-if st.session_state.demo_package:
+# Demo values are applied BEFORE the widgets are created.
+if st.session_state.demo_package is not None:
 
     st.session_state.package_input = (
         st.session_state.demo_package["name"]
@@ -228,6 +155,26 @@ if st.session_state.demo_package:
     )
 
     st.session_state.demo_package = None
+
+
+# =========================================================
+# HEADER
+# =========================================================
+
+# No custom HTML is used here.
+# This prevents <p>, <b>, <div>, etc. from appearing
+# as raw text on the screen.
+
+st.title("🛡️ PackagePatrol AI")
+
+st.subheader(
+    "Intelligent Supply Chain Security for Open-Source Packages"
+)
+
+st.write(
+    "**The Antivirus for Your Package Manager.** "
+    "— scan before you install."
+)
 
 
 # =========================================================
@@ -271,11 +218,12 @@ if page == "Scanner":
     )
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # INPUT SECTION
-    # -----------------------------------------------------
+    # =====================================================
 
     c1, c2 = st.columns([2, 1])
+
 
     with c1:
 
@@ -285,22 +233,27 @@ if page == "Scanner":
             placeholder="e.g. requests, reqeusts, express",
         )
 
+
     with c2:
 
         manager = st.selectbox(
             "Package manager",
-            ["pip", "npm"],
+            [
+                "pip",
+                "npm"
+            ],
             key="manager",
         )
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # DEMO PACKAGES
-    # -----------------------------------------------------
+    # =====================================================
 
     st.caption("Try demo packages:")
 
     demo_cols = st.columns(4)
+
 
     demos = [
         ("requests", "pip"),
@@ -321,8 +274,9 @@ if page == "Scanner":
             key=f"demo_{demo_name}_{demo_manager}",
         ):
 
-            # Do NOT modify package_input directly here.
-            # This avoids StreamlitWidgetAlreadyInstantiatedError.
+            # Store the demo value first.
+            # It will be applied before the text input
+            # is created on the next rerun.
 
             st.session_state.demo_package = {
                 "name": demo_name,
@@ -332,9 +286,9 @@ if page == "Scanner":
             st.rerun()
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # SCAN BUTTON
-    # -----------------------------------------------------
+    # =====================================================
 
     if st.button(
         "🛡️ Scan Package",
@@ -343,6 +297,7 @@ if page == "Scanner":
     ):
 
         package_name = clean_package_name(name)
+
 
         if not valid_package_name(
             package_name,
@@ -353,6 +308,7 @@ if page == "Scanner":
                 "Please enter a valid package name "
                 "for the selected package manager."
             )
+
 
         else:
 
@@ -367,6 +323,7 @@ if page == "Scanner":
                         manager,
                         package_name
                     )
+
 
                 except Exception as exc:
 
@@ -390,11 +347,13 @@ if page == "Scanner":
                         "temporarily unavailable."
                     )
 
+
                 else:
 
                     st.session_state.scan_result = result
 
                     st.session_state.ai_explanation = None
+
 
                     save_scan(
                         package_name,
@@ -403,6 +362,7 @@ if page == "Scanner":
                         result["analysis"]["level"],
                         result["analysis"]["findings"],
                     )
+
 
                     st.success(
                         "Scan completed successfully."
@@ -432,59 +392,55 @@ if page == "Scanner":
         st.subheader("🛡️ Security Result")
 
 
-        # -------------------------------------------------
-        # RISK DISPLAY
-        # -------------------------------------------------
+        # =================================================
+        # SAFE SCORE
+        # =================================================
 
-        # Dynamic risk level
-        # comes directly from risk_engine.py
+        # Make sure the score is always between 0 and 100.
+
+        safe_score = max(
+            0,
+            min(
+                100,
+                int(score)
+            )
+        )
+
+
+        # =================================================
+        # DYNAMIC RISK LEVEL
+        # =================================================
 
         if level == "HIGH":
 
             st.error(
-                f"""
-                🔴 HIGH RISK
-
-                **Risk Score: {score}/100**
-
-                {risk_summary(score, level)}
-                """
+                f"🔴 HIGH RISK\n\n"
+                f"**Risk Score: {safe_score}/100**\n\n"
+                f"{risk_summary(safe_score, level)}"
             )
+
 
         elif level == "MEDIUM":
 
             st.warning(
-                f"""
-                🟠 MEDIUM RISK
-
-                **Risk Score: {score}/100**
-
-                {risk_summary(score, level)}
-                """
+                f"🟠 MEDIUM RISK\n\n"
+                f"**Risk Score: {safe_score}/100**\n\n"
+                f"{risk_summary(safe_score, level)}"
             )
+
 
         else:
 
             st.success(
-                f"""
-                🟢 LOW RISK
-
-                **Risk Score: {score}/100**
-
-                {risk_summary(score, level)}
-                """
+                f"🟢 LOW RISK\n\n"
+                f"**Risk Score: {safe_score}/100**\n\n"
+                f"{risk_summary(safe_score, level)}"
             )
 
 
-        # -------------------------------------------------
-        # SCORE BAR
-        # -------------------------------------------------
-
-        # Keep score between 0 and 100
-        safe_score = max(
-            0,
-            min(100, int(score))
-        )
+        # =================================================
+        # RISK SCORE BAR
+        # =================================================
 
         st.progress(
             safe_score / 100,
@@ -492,9 +448,9 @@ if page == "Scanner":
         )
 
 
-        # -------------------------------------------------
+        # =================================================
         # RECOMMENDED ACTION
-        # -------------------------------------------------
+        # =================================================
 
         if level == "HIGH":
 
@@ -503,12 +459,14 @@ if page == "Scanner":
                 f"{analysis['recommended_action']}"
             )
 
+
         elif level == "MEDIUM":
 
             st.warning(
                 f"⚠️ **Recommended action:** "
                 f"{analysis['recommended_action']}"
             )
+
 
         else:
 
@@ -523,16 +481,27 @@ if page == "Scanner":
         # =================================================
 
         why = [
-            finding["explanation"]
+
+            finding.get(
+                "explanation",
+                ""
+            )
+
             for finding in analysis["findings"]
+
             if finding.get("severity")
-            in {"HIGH", "MEDIUM", "LOW"}
+            in {
+                "HIGH",
+                "MEDIUM",
+                "LOW"
+            }
         ]
 
 
         if why:
 
             st.markdown("### Why?")
+
 
             for item in why[:5]:
 
@@ -545,7 +514,9 @@ if page == "Scanner":
         # SECURITY FINDINGS
         # =================================================
 
-        st.markdown("### 🔍 Security Findings")
+        st.markdown(
+            "### 🔍 Security Findings"
+        )
 
 
         for finding in analysis["findings"]:
@@ -571,83 +542,73 @@ if page == "Scanner":
             )
 
 
-            # HIGH
+            # -------------------------------------------------
+            # HIGH FINDING
+            # -------------------------------------------------
+
             if sev == "HIGH":
 
                 st.error(
-                    f"""
-                    🔴 **{title}**
-
-                    **Severity:** HIGH
-
-                    {explanation}
-
-                    **Evidence:** {evidence}
-                    """
+                    f"🔴 **{title}**\n\n"
+                    f"**Severity:** HIGH\n\n"
+                    f"{explanation}\n\n"
+                    f"**Evidence:** {evidence}"
                 )
 
 
-            # MEDIUM
+            # -------------------------------------------------
+            # MEDIUM FINDING
+            # -------------------------------------------------
+
             elif sev == "MEDIUM":
 
                 st.warning(
-                    f"""
-                    🟠 **{title}**
-
-                    **Severity:** MEDIUM
-
-                    {explanation}
-
-                    **Evidence:** {evidence}
-                    """
+                    f"🟠 **{title}**\n\n"
+                    f"**Severity:** MEDIUM\n\n"
+                    f"{explanation}\n\n"
+                    f"**Evidence:** {evidence}"
                 )
 
 
-            # LOW
+            # -------------------------------------------------
+            # LOW FINDING
+            # -------------------------------------------------
+
             elif sev == "LOW":
 
                 st.warning(
-                    f"""
-                    🟡 **{title}**
-
-                    **Severity:** LOW
-
-                    {explanation}
-
-                    **Evidence:** {evidence}
-                    """
+                    f"🟡 **{title}**\n\n"
+                    f"**Severity:** LOW\n\n"
+                    f"{explanation}\n\n"
+                    f"**Evidence:** {evidence}"
                 )
 
 
-            # SAFE
+            # -------------------------------------------------
+            # SAFE FINDING
+            # -------------------------------------------------
+
             elif sev == "SAFE":
 
                 st.success(
-                    f"""
-                    🟢 **{title}**
-
-                    **Severity:** SAFE
-
-                    {explanation}
-
-                    **Evidence:** {evidence}
-                    """
+                    f"🟢 **{title}**\n\n"
+                    f"**Severity:** SAFE\n\n"
+                    f"{explanation}\n\n"
+                    f"**Evidence:** {evidence}"
                 )
 
 
-            # INFO
+            # -------------------------------------------------
+            # INFO FINDING
+            # -------------------------------------------------
+
             else:
 
                 st.info(
-                    f"""
-                    ℹ️ **{title}**
-
-                    **Severity:** {sev}
-
-                    {explanation}
-
-                    **Evidence:** {evidence}
-                    """
+                    f"ℹ️ **{title}**\n\n"
+                    f"**Severity:** {sev}\n\n"
+                    f"{explanation}\n\n"
+                    f"**Evidence:** {evidence}"
                 )
 
 
@@ -655,7 +616,9 @@ if page == "Scanner":
         # AI SECURITY ANALYSIS
         # =================================================
 
-        st.markdown("### 🤖 AI Security Analysis")
+        st.markdown(
+            "### 🤖 AI Security Analysis"
+        )
 
 
         if st.session_state.ai_explanation is None:
@@ -678,6 +641,7 @@ if page == "Scanner":
                             )
                         )
 
+
                     except Exception as exc:
 
                         st.session_state.ai_explanation = None
@@ -691,17 +655,16 @@ if page == "Scanner":
                             f"Technical detail: {exc}"
                         )
 
+
                 st.rerun()
 
 
         if st.session_state.ai_explanation:
 
-            # Normal Markdown output.
-            # No custom HTML here.
-
             st.markdown(
                 st.session_state.ai_explanation
             )
+
 
         else:
 
@@ -718,7 +681,9 @@ if page == "Scanner":
         # PACKAGE DETAILS
         # =================================================
 
-        st.markdown("### 📦 Package Details")
+        st.markdown(
+            "### 📦 Package Details"
+        )
 
 
         details = {
@@ -742,24 +707,32 @@ if page == "Scanner":
                 package["license"],
 
             "First release":
-                package["release_date"] or "N/A",
+                package["release_date"]
+                or "N/A",
 
             "Last updated":
-                package["last_updated"] or "N/A",
+                package["last_updated"]
+                or "N/A",
 
             "Versions":
                 package["versions_count"],
 
             "Dependencies":
                 len(
-                    package.get("dependencies")
+                    package.get(
+                        "dependencies"
+                    )
                     or []
                 ),
 
             "Downloads (npm last week)":
                 (
-                    package.get("downloads")
+                    package.get(
+                        "downloads"
+                    )
+
                     if package["manager"] == "npm"
+
                     else
                     "Not provided by PyPI JSON API"
                 ),
@@ -779,9 +752,9 @@ if page == "Scanner":
         )
 
 
-        # -------------------------------------------------
+        # =================================================
         # REPOSITORY
-        # -------------------------------------------------
+        # =================================================
 
         if package.get("repository"):
 
@@ -791,9 +764,9 @@ if page == "Scanner":
             )
 
 
-        # -------------------------------------------------
-        # REGISTRY
-        # -------------------------------------------------
+        # =================================================
+        # REGISTRY PAGE
+        # =================================================
 
         st.markdown(
             f"**Registry page:** "
@@ -815,6 +788,7 @@ if page == "Scanner":
             st.markdown(
                 "### 🔍 Possible Intended Package"
             )
+
 
             similarity = (
                 typo["similarity"] * 100
@@ -845,6 +819,7 @@ if page == "Scanner":
                             package["manager"],
                             typo["target"]
                         )
+
 
                     except Exception as exc:
 
@@ -922,19 +897,19 @@ if page == "Scanner":
                                     "dependencies"
                                 )
                                 or []
-                            ),
+                            )
                         ),
 
                         (
                             "Risk score",
                             analysis["score"],
-                            compare["analysis"]["score"],
+                            compare["analysis"]["score"]
                         ),
 
                         (
                             "Similarity",
                             f"{similarity:.1f}%",
-                            "Reference package",
+                            "Reference package"
                         ),
                     ]
 
@@ -945,7 +920,7 @@ if page == "Scanner":
                             columns=[
                                 "Field",
                                 "Scanned package",
-                                "Possible intended package",
+                                "Possible intended package"
                             ],
                         ),
                         use_container_width=True,
@@ -1008,9 +983,9 @@ if page == "Scanner":
         r1, r2 = st.columns(2)
 
 
-        # -------------------------------------------------
-        # JSON REPORT
-        # -------------------------------------------------
+        # =================================================
+        # JSON DOWNLOAD
+        # =================================================
 
         r1.download_button(
 
@@ -1034,29 +1009,43 @@ if page == "Scanner":
         )
 
 
-        # -------------------------------------------------
-        # TXT REPORT
-        # -------------------------------------------------
+        # =================================================
+        # TXT DOWNLOAD
+        # =================================================
 
         txt = (
+
             "PackagePatrol AI Report\n"
+
             + "=" * 30
+
             + "\n"
+
             + f"Package: {package['name']}\n"
+
             + f"Manager: {package['manager']}\n"
+
             + f"Version: {package['version']}\n"
+
             + f"Risk: {level} ({score}/100)\n\n"
+
             + "Recommendation:\n"
+
             + f"{analysis['recommended_action']}\n\n"
+
             + "Findings:\n"
+
             + "\n".join(
+
                 [
+
                     (
                         f"- {f['title']} "
                         f"[{f['severity']}]: "
                         f"{f['explanation']} "
                         f"Evidence: {f['evidence']}"
                     )
+
                     for f in analysis["findings"]
                 ]
             )
@@ -1098,8 +1087,8 @@ elif page == "Dashboard":
     if df.empty:
 
         st.info(
-            "No scans yet. Scan a package "
-            "from the Scanner page to populate "
+            "No scans yet. Scan a package from "
+            "the Scanner page to populate "
             "the dashboard."
         )
 
@@ -1111,7 +1100,7 @@ elif page == "Dashboard":
 
         c1.metric(
             "Total Packages Scanned",
-            len(df)
+            len(df),
         )
 
 
@@ -1119,7 +1108,7 @@ elif page == "Dashboard":
             "High Risk",
             int(
                 (df.level == "HIGH").sum()
-            )
+            ),
         )
 
 
@@ -1127,7 +1116,7 @@ elif page == "Dashboard":
             "Medium Risk",
             int(
                 (df.level == "MEDIUM").sum()
-            )
+            ),
         )
 
 
@@ -1135,7 +1124,7 @@ elif page == "Dashboard":
             "Low Risk",
             int(
                 (df.level == "LOW").sum()
-            )
+            ),
         )
 
 
@@ -1166,6 +1155,7 @@ elif page == "Dashboard":
             st.write(
                 threats.index[0]
             )
+
 
         else:
 
@@ -1212,9 +1202,8 @@ st.divider()
 
 
 st.caption(
-    "PackagePatrol AI is a defensive "
-    "metadata/static analysis MVP. "
-    "A LOW result is not a guarantee that "
-    "a package is safe, and heuristic warnings "
+    "PackagePatrol AI is a defensive metadata/static "
+    "analysis MVP. A LOW result is not a guarantee "
+    "that a package is safe, and heuristic warnings "
     "are not proof of malware."
 )
