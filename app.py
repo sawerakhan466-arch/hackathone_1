@@ -616,7 +616,7 @@ if page == "Scanner":
         # AI SECURITY ANALYSIS
         # =================================================
 
-        st.markdown(
+       st.markdown(
             "### 🤖 AI Security Analysis"
         )
 
@@ -641,7 +641,6 @@ if page == "Scanner":
                             )
                         )
 
-
                     except Exception as exc:
 
                         st.session_state.ai_explanation = None
@@ -655,15 +654,14 @@ if page == "Scanner":
                             f"Technical detail: {exc}"
                         )
 
+                st.rerun()
 
-                       st.rerun()
 
+        if st.session_state.ai_explanation:
 
-       if st.session_state.ai_explanation:
-
-    st.markdown(
-        st.session_state.ai_explanation
-    )
+            st.markdown(
+                st.session_state.ai_explanation
+            )
         # =================================================
         # PACKAGE DETAILS
         # =================================================
