@@ -656,7 +656,7 @@ if page == "Scanner":
                         )
 
 
-                st.rerun()
+                   st.rerun()
 
 
        if st.session_state.ai_explanation:
