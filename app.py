@@ -1,3 +1,4 @@
+
 import json
 import sqlite3
 from datetime import datetime, timezone
@@ -160,16 +161,7 @@ if st.session_state.demo_package is not None:
 # HEADER
 # =========================================================
 
-st.title("🛡️ PackagePatrol AI")
 
-st.subheader(
-    "Intelligent Supply Chain Security for Open-Source Packages"
-)
-
-st.write(
-    "**The Antivirus for Your Package Manager.** "
-    "— scan before you install."
-)
 
 
 # =========================================================
@@ -202,8 +194,17 @@ with st.sidebar:
 # =========================================================
 # SCANNER
 # =========================================================
-
 if page == "Scanner":
+    st.title("🛡️ PackagePatrol AI")
+
+    st.subheader(
+        "Intelligent Supply Chain Security for Open-Source Packages"
+    )
+
+    st.write(
+        "**The Antivirus for Your Package Manager.** "
+        "— scan before you install."
+    )
 
     st.subheader("🔎 Package Scanner")
 
