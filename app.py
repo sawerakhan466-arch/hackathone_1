@@ -659,24 +659,11 @@ if page == "Scanner":
                 st.rerun()
 
 
-        if st.session_state.ai_explanation:
+       if st.session_state.ai_explanation:
 
-            st.markdown(
-                st.session_state.ai_explanation
-            )
-
-
-        else:
-
-            st.warning(
-                "AI explanation unavailable — "
-                "showing rule-based analysis. "
-                "Add GROQ_API_KEY in Streamlit "
-                "Secrets to enable the optional "
-                "AI explanation."
-            )
-
-
+    st.markdown(
+        st.session_state.ai_explanation
+    )
         # =================================================
         # PACKAGE DETAILS
         # =================================================
