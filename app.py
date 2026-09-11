@@ -66,10 +66,12 @@ def save_scan(name, manager, score, level, findings):
             finding.get("severity") in {"HIGH", "MEDIUM"}
             and finding.get("category") != "normal"
         ):
+
             threat = finding.get(
                 "title",
                 "Security indicator"
             )
+
             break
 
     conn.execute(
@@ -133,8 +135,6 @@ if "manager" not in st.session_state:
 if "package_input" not in st.session_state:
     st.session_state.package_input = ""
 
-# Temporary state for demo buttons.
-# This prevents StreamlitWidgetAlreadyInstantiatedError.
 if "demo_package" not in st.session_state:
     st.session_state.demo_package = None
 
@@ -143,7 +143,6 @@ if "demo_package" not in st.session_state:
 # DEMO PACKAGE HANDLING
 # =========================================================
 
-# Demo values are applied BEFORE the widgets are created.
 if st.session_state.demo_package is not None:
 
     st.session_state.package_input = (
@@ -160,10 +159,6 @@ if st.session_state.demo_package is not None:
 # =========================================================
 # HEADER
 # =========================================================
-
-# No custom HTML is used here.
-# This prevents <p>, <b>, <div>, etc. from appearing
-# as raw text on the screen.
 
 st.title("🛡️ PackagePatrol AI")
 
@@ -254,7 +249,6 @@ if page == "Scanner":
 
     demo_cols = st.columns(4)
 
-
     demos = [
         ("requests", "pip"),
         ("reqeusts", "pip"),
@@ -273,10 +267,6 @@ if page == "Scanner":
             use_container_width=True,
             key=f"demo_{demo_name}_{demo_manager}",
         ):
-
-            # Store the demo value first.
-            # It will be applied before the text input
-            # is created on the next rerun.
 
             st.session_state.demo_package = {
                 "name": demo_name,
@@ -324,7 +314,6 @@ if page == "Scanner":
                         package_name
                     )
 
-
                 except Exception as exc:
 
                     result = None
@@ -354,7 +343,6 @@ if page == "Scanner":
 
                     st.session_state.ai_explanation = None
 
-
                     save_scan(
                         package_name,
                         manager,
@@ -362,7 +350,6 @@ if page == "Scanner":
                         result["analysis"]["level"],
                         result["analysis"]["findings"],
                     )
-
 
                     st.success(
                         "Scan completed successfully."
@@ -395,8 +382,6 @@ if page == "Scanner":
         # =================================================
         # SAFE SCORE
         # =================================================
-
-        # Make sure the score is always between 0 and 100.
 
         safe_score = max(
             0,
@@ -481,7 +466,6 @@ if page == "Scanner":
         # =================================================
 
         why = [
-
             finding.get(
                 "explanation",
                 ""
@@ -542,10 +526,6 @@ if page == "Scanner":
             )
 
 
-            # -------------------------------------------------
-            # HIGH FINDING
-            # -------------------------------------------------
-
             if sev == "HIGH":
 
                 st.error(
@@ -555,10 +535,6 @@ if page == "Scanner":
                     f"**Evidence:** {evidence}"
                 )
 
-
-            # -------------------------------------------------
-            # MEDIUM FINDING
-            # -------------------------------------------------
 
             elif sev == "MEDIUM":
 
@@ -570,10 +546,6 @@ if page == "Scanner":
                 )
 
 
-            # -------------------------------------------------
-            # LOW FINDING
-            # -------------------------------------------------
-
             elif sev == "LOW":
 
                 st.warning(
@@ -584,10 +556,6 @@ if page == "Scanner":
                 )
 
 
-            # -------------------------------------------------
-            # SAFE FINDING
-            # -------------------------------------------------
-
             elif sev == "SAFE":
 
                 st.success(
@@ -597,10 +565,6 @@ if page == "Scanner":
                     f"**Evidence:** {evidence}"
                 )
 
-
-            # -------------------------------------------------
-            # INFO FINDING
-            # -------------------------------------------------
 
             else:
 
@@ -616,7 +580,7 @@ if page == "Scanner":
         # AI SECURITY ANALYSIS
         # =================================================
 
-       st.markdown(
+        st.markdown(
             "### 🤖 AI Security Analysis"
         )
 
@@ -662,6 +626,8 @@ if page == "Scanner":
             st.markdown(
                 st.session_state.ai_explanation
             )
+
+
         # =================================================
         # PACKAGE DETAILS
         # =================================================
@@ -735,460 +701,3 @@ if page == "Scanner":
             use_container_width=True,
             hide_index=True,
         )
-
-
-        # =================================================
-        # REPOSITORY
-        # =================================================
-
-        if package.get("repository"):
-
-            st.markdown(
-                f"**Repository:** "
-                f"{package['repository']}"
-            )
-
-
-        # =================================================
-        # REGISTRY PAGE
-        # =================================================
-
-        st.markdown(
-            f"**Registry page:** "
-            f"{package_url(package['manager'], package['name'])}"
-        )
-
-
-        # =================================================
-        # TYPOSQUATTING
-        # =================================================
-
-        typo = analysis.get(
-            "typosquatting"
-        )
-
-
-        if typo:
-
-            st.markdown(
-                "### 🔍 Possible Intended Package"
-            )
-
-
-            similarity = (
-                typo["similarity"] * 100
-            )
-
-
-            st.write(
-                f"The closest popular package "
-                f"found was **{typo['target']}** "
-                f"with **{similarity:.1f}%** "
-                f"name similarity."
-            )
-
-
-            if st.button(
-                "Compare Packages",
-                key="compare_packages",
-            ):
-
-                with st.spinner(
-                    "Fetching the possible "
-                    "intended package..."
-                ):
-
-                    try:
-
-                        compare = full_scan(
-                            package["manager"],
-                            typo["target"]
-                        )
-
-
-                    except Exception as exc:
-
-                        compare = None
-
-                        st.error(
-                            "Could not compare "
-                            "the packages."
-                        )
-
-                        st.caption(
-                            f"Technical detail: {exc}"
-                        )
-
-
-                if compare:
-
-                    a = package
-
-                    b = compare["package"]
-
-
-                    rows = [
-
-                        (
-                            "Name",
-                            a["name"],
-                            b["name"]
-                        ),
-
-                        (
-                            "Version",
-                            a["version"],
-                            b["version"]
-                        ),
-
-                        (
-                            "Author",
-                            a["author"],
-                            b["author"]
-                        ),
-
-                        (
-                            "Description",
-                            a["description"],
-                            b["description"]
-                        ),
-
-                        (
-                            "Repository",
-                            a.get("repository")
-                            or "N/A",
-                            b.get("repository")
-                            or "N/A"
-                        ),
-
-                        (
-                            "Release date",
-                            a.get("release_date")
-                            or "N/A",
-                            b.get("release_date")
-                            or "N/A"
-                        ),
-
-                        (
-                            "Dependencies",
-                            len(
-                                a.get(
-                                    "dependencies"
-                                )
-                                or []
-                            ),
-                            len(
-                                b.get(
-                                    "dependencies"
-                                )
-                                or []
-                            )
-                        ),
-
-                        (
-                            "Risk score",
-                            analysis["score"],
-                            compare["analysis"]["score"]
-                        ),
-
-                        (
-                            "Similarity",
-                            f"{similarity:.1f}%",
-                            "Reference package"
-                        ),
-                    ]
-
-
-                    st.dataframe(
-                        pd.DataFrame(
-                            rows,
-                            columns=[
-                                "Field",
-                                "Scanned package",
-                                "Possible intended package"
-                            ],
-                        ),
-                        use_container_width=True,
-                        hide_index=True,
-                    )
-
-
-        # =================================================
-        # DOWNLOAD REPORT
-        # =================================================
-
-        report = {
-
-            "package":
-                package["name"],
-
-            "manager":
-                package["manager"],
-
-            "version":
-                package["version"],
-
-            "risk_score":
-                score,
-
-            "risk_level":
-                level,
-
-            "findings":
-                analysis["findings"],
-
-            "typosquatting":
-                analysis["typosquatting"],
-
-            "metadata":
-                {
-                    k: v
-                    for k, v in package.items()
-                    if k != "raw"
-                },
-
-            "ai_explanation":
-                st.session_state.ai_explanation,
-
-            "recommended_action":
-                analysis["recommended_action"],
-
-            "timestamp":
-                datetime.now(
-                    timezone.utc
-                ).isoformat(),
-        }
-
-
-        st.markdown(
-            "### 📥 Download Report"
-        )
-
-
-        r1, r2 = st.columns(2)
-
-
-        # =================================================
-        # JSON DOWNLOAD
-        # =================================================
-
-        r1.download_button(
-
-            "Download JSON",
-
-            json.dumps(
-                report,
-                indent=2,
-                ensure_ascii=False
-            ),
-
-            file_name=(
-                f"packagepatrol_"
-                f"{package['name'].replace('/', '_')}"
-                f".json"
-            ),
-
-            mime="application/json",
-
-            use_container_width=True,
-        )
-
-
-        # =================================================
-        # TXT DOWNLOAD
-        # =================================================
-
-        txt = (
-
-            "PackagePatrol AI Report\n"
-
-            + "=" * 30
-
-            + "\n"
-
-            + f"Package: {package['name']}\n"
-
-            + f"Manager: {package['manager']}\n"
-
-            + f"Version: {package['version']}\n"
-
-            + f"Risk: {level} ({score}/100)\n\n"
-
-            + "Recommendation:\n"
-
-            + f"{analysis['recommended_action']}\n\n"
-
-            + "Findings:\n"
-
-            + "\n".join(
-
-                [
-
-                    (
-                        f"- {f['title']} "
-                        f"[{f['severity']}]: "
-                        f"{f['explanation']} "
-                        f"Evidence: {f['evidence']}"
-                    )
-
-                    for f in analysis["findings"]
-                ]
-            )
-        )
-
-
-        r2.download_button(
-
-            "Download TXT",
-
-            txt,
-
-            file_name=(
-                f"packagepatrol_"
-                f"{package['name'].replace('/', '_')}"
-                f".txt"
-            ),
-
-            mime="text/plain",
-
-            use_container_width=True,
-        )
-
-
-# =========================================================
-# DASHBOARD
-# =========================================================
-
-elif page == "Dashboard":
-
-    st.subheader(
-        "📊 Security Dashboard"
-    )
-
-
-    df = load_history()
-
-
-    if df.empty:
-
-        st.info(
-            "No scans yet. Scan a package from "
-            "the Scanner page to populate "
-            "the dashboard."
-        )
-
-
-    else:
-
-        c1, c2, c3, c4 = st.columns(4)
-
-
-        c1.metric(
-            "Total Packages Scanned",
-            len(df),
-        )
-
-
-        c2.metric(
-            "High Risk",
-            int(
-                (df.level == "HIGH").sum()
-            ),
-        )
-
-
-        c3.metric(
-            "Medium Risk",
-            int(
-                (df.level == "MEDIUM").sum()
-            ),
-        )
-
-
-        c4.metric(
-            "Low Risk",
-            int(
-                (df.level == "LOW").sum()
-            ),
-        )
-
-
-        st.markdown(
-            "### Recent Scans"
-        )
-
-
-        st.dataframe(
-            df.head(10),
-            use_container_width=True,
-            hide_index=True,
-        )
-
-
-        threats = df[
-            df.top_threat != "None"
-        ]["top_threat"].value_counts()
-
-
-        st.markdown(
-            "### Top Detected Threat Type"
-        )
-
-
-        if not threats.empty:
-
-            st.write(
-                threats.index[0]
-            )
-
-
-        else:
-
-            st.write(
-                "No threat pattern recorded yet."
-            )
-
-
-# =========================================================
-# HISTORY
-# =========================================================
-
-else:
-
-    st.subheader(
-        "🕘 Scan History"
-    )
-
-
-    df = load_history()
-
-
-    if df.empty:
-
-        st.info(
-            "No scans yet."
-        )
-
-
-    else:
-
-        st.dataframe(
-            df,
-            use_container_width=True,
-            hide_index=True,
-        )
-
-
-# =========================================================
-# FOOTER
-# =========================================================
-
-st.divider()
-
-
-st.caption(
-    "PackagePatrol AI is a defensive metadata/static "
-    "analysis MVP. A LOW result is not a guarantee "
-    "that a package is safe, and heuristic warnings "
-    "are not proof of malware."
-)
